@@ -1,0 +1,69 @@
+
+# unity generated files
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# memory captures and crash reports
+MemoryCaptures/
+*.stacktrace
+
+# visual studio / rider
+.vs/
+.idea/
+.gradle/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+
+# visual studio code
+.vscode/
+
+# unity generated solution files
+*.csproj
+*.unityproj
+*.sln
+
+# generated build files
+/[Bb]uild/
+/[Bb]uilds/
+/[Rr]ecordings/
+
+# os generated files
+.DS_Store
+Thumbs.db
+
+# crash reports
+sysinfo.txt
+
+# autodesk
+*.mdb
+
+# unity addressables generated files
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+
+# visual studio cache
+.vsconfig
+
+# user specific settings
+*.user
+*.userprefs
+
+# temporary files
+*.tmp
+*.temp
+*.bak
+
+# unity generated package lock backup
+Packages/packages-lock.json.backup
