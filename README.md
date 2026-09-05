@@ -124,20 +124,35 @@ The main gameplay mechanics and environment are being combined into a complete p
 This project uses Unity and the XR Interaction Toolkit.
 
 Unity Asset Store assets used:
+
 Anime Nature (Hipernt)
+
 Free Explorer Couple (OlyPoly)
+
 Free Sample - Nature Necessities - Stylized Succulents (Patchmesh)
+
 FREE Skybox Extended Shader (BOXOPHOBIC)
+
 Free Sport Balls (Saritasa)
+
 Furnished Cabin (Johnny Kasapi)
+
 Interior House Assets (Unity Technologies)
+
 Low Poly Basic Items Pack - Household Items (Kabungus)
+
 Low Poly Fence Pack (Broken Vector)
+
 Low Poly Food Lite (JustCreate)
+
 Mountain Terrain, Rocks and Tree (Jermesa Studio)
+
 Simple Low Poly Keys (3Digitalis)
+
 Simple, Low-Poly Decorative Plant Assets (Ultrasonic)
+
 Small Kit 3D Stylized Petshop Asset (Bublisher)
+
 
 
 ## License
