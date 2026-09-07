@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -13,10 +14,9 @@ public class DogCarryController : MonoBehaviour
     [SerializeField] private InputActionReference grabAction;
 
     [Header("Detection")]
-    [SerializeField] private float maxCarryDistance = 0.8f;
+    [SerializeField] private float maxCarryDistance = 2f;
     [SerializeField] private float detectionRadius = 0.12f;
     [SerializeField] private LayerMask carryableLayers = ~0;
-
 
     // stores the object currently being carried
     private CarryableObject carriedObject;
@@ -28,6 +28,9 @@ public class DogCarryController : MonoBehaviour
 
     private void OnEnable()
     {
+        if (grabAction == null)
+            return;
+
         grabAction.action.Enable();
 
         grabAction.action.performed += OnGrabPressed;
@@ -36,6 +39,9 @@ public class DogCarryController : MonoBehaviour
 
     private void OnDisable()
     {
+        if (grabAction == null)
+            return;
+
         grabAction.action.performed -= OnGrabPressed;
         grabAction.action.canceled -= OnGrabReleased;
 
@@ -48,37 +54,57 @@ public class DogCarryController : MonoBehaviour
         if (carriedObject != null)
             return;
 
-        Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+        if (cameraTransform == null || carryPoint == null)
+            return;
 
-        if (Physics.SphereCast(ray, detectionRadius, out RaycastHit hit, maxCarryDistance, carryableLayers))
+        Ray ray = new Ray(
+            cameraTransform.position,
+            cameraTransform.forward);
+
+        // use the controller's maximum range to find possible objects
+        if (!Physics.SphereCast(
+            ray,
+            detectionRadius,
+            out RaycastHit hit,
+            maxCarryDistance,
+            carryableLayers))
         {
-            CarryableObject carryable = hit.collider.GetComponent<CarryableObject>();
+            return;
+        }
 
-            if (carryable == null)
-                return;
+        CarryableObject carryable =
+            hit.collider.GetComponentInParent<CarryableObject>();
 
-            carriedObject = carryable;
+        if (carryable == null)
+            return;
 
-            Rigidbody rb = carriedObject.GetComponent<Rigidbody>();
+        // check the individual object's grab range
+        if (hit.distance > carryable.GrabRange)
+            return;
 
-            if (rb != null)
-            {
-                rb.isKinematic = true;
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
-            }
+        carriedObject = carryable;
 
-            carriedObject.transform.position = carryPoint.position;
-            carriedObject.transform.rotation = carryPoint.rotation;
+        Rigidbody rb = carriedObject.GetComponent<Rigidbody>();
 
-            // check if objective item and update
-            ObjectiveItem objectiveItem = carriedObject.GetComponent<ObjectiveItem>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
 
-            if (objectiveItem != null &&
-                GameManager.Instance.CurrentState == GameManager.GameState.FindKeys)
-            {
-                GameManager.Instance.KeysCollected();
-            }
+        carriedObject.transform.position = carryPoint.position;
+        carriedObject.transform.rotation = carryPoint.rotation;
+
+        // check if objective item and update
+        ObjectiveItem objectiveItem =
+            carriedObject.GetComponent<ObjectiveItem>();
+
+        if (objectiveItem != null &&
+            GameManager.Instance.CurrentState ==
+            GameManager.GameState.FindKeys)
+        {
+            GameManager.Instance.KeysCollected();
         }
     }
 
@@ -88,8 +114,6 @@ public class DogCarryController : MonoBehaviour
             return;
 
         Rigidbody rb = carriedObject.GetComponent<Rigidbody>();
-
-        // carriedObject.transform.SetParent(null);
 
         if (rb != null)
         {
@@ -101,7 +125,7 @@ public class DogCarryController : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (carriedObject == null)
+        if (carriedObject == null || carryPoint == null)
             return;
 
         carriedObject.transform.position = carryPoint.position;
@@ -113,11 +137,11 @@ public class DogCarryController : MonoBehaviour
     /// </summary>
     public bool IsCarryingObjectiveItem()
     {
-
         if (carriedObject == null)
             return false;
 
-        ObjectiveItem objectiveItem = carriedObject.GetComponent<ObjectiveItem>();
+        ObjectiveItem objectiveItem =
+            carriedObject.GetComponent<ObjectiveItem>();
 
         return objectiveItem != null;
     }

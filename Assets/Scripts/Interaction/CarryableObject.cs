@@ -1,10 +1,16 @@
+
 using UnityEngine;
 
 /// <summary>
 /// marks an object as something the dog can carry.
-/// additional properties can be added here later, such as weight or scent type.
 /// </summary>
 public class CarryableObject : MonoBehaviour
 {
-    // this class is intentionally empty for now.
+    [Header("Grab Settings")]
+    [SerializeField] private float grabRange = 0.8f;
+
+    /// <summary>
+    /// returns the maximum distance from which this object can be grabbed.
+    /// </summary>
+    public float GrabRange => grabRange;
 }

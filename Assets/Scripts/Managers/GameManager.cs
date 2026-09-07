@@ -19,6 +19,9 @@ public class GameManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private DogCarryController dogCarryController;
 
+
+    [SerializeField] private DogAudioController dogAudioController;
+
     public GameState CurrentState { get; private set; }
 
     private void Awake()
@@ -72,6 +75,11 @@ public class GameManager : MonoBehaviour
 
         ObjectiveManager.Instance.SetObjective(
             "Bring the keys to your human");
+
+        if (dogAudioController != null)
+        {
+            dogAudioController.PlayCompletionSound();
+        }
     }
 
     /// <summary>

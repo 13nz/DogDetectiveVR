@@ -16,6 +16,10 @@ public class DogSniffController : MonoBehaviour
     // tracks whether the player is currently sniffing
     private bool isSniffing;
 
+
+    [Header("Audio")]
+    [SerializeField] private DogAudioController dogAudioController;
+
     private void Awake()
     {
         scentSources = FindObjectsByType<ScentSource>(FindObjectsSortMode.None);
@@ -64,14 +68,21 @@ public class DogSniffController : MonoBehaviour
     }
 
 
+    
     private void OnSniffStarted(InputAction.CallbackContext context)
     {
         isSniffing = true;
+
+        if (dogAudioController != null)
+        {
+            dogAudioController.SetSniffing(true);
+        }
     }
 
     /// <summary>
     /// hides every scent source when sniffing ends.
     /// </summary>
+    
     private void OnSniffEnded(InputAction.CallbackContext context)
     {
         isSniffing = false;
@@ -80,5 +91,10 @@ public class DogSniffController : MonoBehaviour
         {
             source.SetSniffVisible(false);
         }
-}
+
+        if (dogAudioController != null)
+        {
+            dogAudioController.SetSniffing(false);
+        }
+    }
 }
