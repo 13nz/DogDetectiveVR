@@ -24,6 +24,7 @@ public class GameManager : MonoBehaviour
 
     public GameState CurrentState { get; private set; }
 
+
     private void Awake()
     {
         if (Instance == null)
@@ -64,7 +65,7 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// called when the player picks up the keys
+    /// called when the player picks up the keys.
     /// </summary>
     public void KeysCollected()
     {

@@ -1,10 +1,9 @@
-
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// allows the dog to pick up and carry nearby objects.
-/// objects are carried at the carry point in front of the camera.
+/// allows the dog to detect and carry nearby objects
+/// disables carried object colliders to prevent physics from pushing the dog upward
 /// </summary>
 public class DogCarryController : MonoBehaviour
 {
@@ -14,95 +13,137 @@ public class DogCarryController : MonoBehaviour
     [SerializeField] private InputActionReference grabAction;
 
     [Header("Detection")]
-    [SerializeField] private float maxCarryDistance = 2f;
+    [SerializeField] private float maxCarryDistance = 0.8f;
     [SerializeField] private float detectionRadius = 0.12f;
     [SerializeField] private LayerMask carryableLayers = ~0;
 
     // stores the object currently being carried
     private CarryableObject carriedObject;
 
+    // stores the rigidbody belonging to the carried object
+    private Rigidbody carriedRigidbody;
+
+    // stores every collider belonging to the carried object and its children
+    private Collider[] carriedColliders;
+
     /// <summary>
-    /// returns the object currently being carried.
+    /// returns the object currently being carried
     /// </summary>
     public CarryableObject CarriedObject => carriedObject;
 
     private void OnEnable()
     {
+        // stops the script from running if no grab action has been assigned
         if (grabAction == null)
             return;
 
+        // enables the assigned grab input action
         grabAction.action.Enable();
 
+        // listens for the grab button being pressed or released
         grabAction.action.performed += OnGrabPressed;
         grabAction.action.canceled += OnGrabReleased;
     }
 
     private void OnDisable()
     {
+        // stops the script from running if no grab action has been assigned
         if (grabAction == null)
             return;
 
+        // removes the input event listeners
         grabAction.action.performed -= OnGrabPressed;
         grabAction.action.canceled -= OnGrabReleased;
 
+        // disables the assigned grab input action
         grabAction.action.Disable();
+
+        // releases the object if the script is disabled while carrying something
+        ReleaseCarriedObject();
     }
 
     private void OnGrabPressed(InputAction.CallbackContext context)
     {
-        // don't pick up another object if one is already being carried
+        // prevents the dog from carrying more than one object at a time
         if (carriedObject != null)
             return;
 
+        // checks that the required references have been assigned
         if (cameraTransform == null || carryPoint == null)
             return;
 
+        // creates a ray that starts at the camera and points forward
         Ray ray = new Ray(
             cameraTransform.position,
-            cameraTransform.forward);
+            cameraTransform.forward
+        );
 
-        // use the controller's maximum range to find possible objects
+        // checks for a carryable object in front of the dog
         if (!Physics.SphereCast(
-            ray,
-            detectionRadius,
-            out RaycastHit hit,
-            maxCarryDistance,
-            carryableLayers))
+                ray,
+                detectionRadius,
+                out RaycastHit hit,
+                maxCarryDistance,
+                carryableLayers,
+                QueryTriggerInteraction.Ignore))
         {
             return;
         }
 
+        // searches the detected object and its parents for the carryable script
         CarryableObject carryable =
             hit.collider.GetComponentInParent<CarryableObject>();
 
+        // stops if the detected object is not carryable
         if (carryable == null)
-            return;
-
-        // check the individual object's grab range
-        if (hit.distance > carryable.GrabRange)
-            return;
-
-        carriedObject = carryable;
-
-        Rigidbody rb = carriedObject.GetComponent<Rigidbody>();
-
-        if (rb != null)
         {
-            rb.isKinematic = true;
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            Debug.Log("the detected object does not have a carryable object script");
+            return;
         }
 
-        carriedObject.transform.position = carryPoint.position;
-        carriedObject.transform.rotation = carryPoint.rotation;
+        // stores the object that will be carried
+        carriedObject = carryable;
 
-        // check if objective item and update
+        // searches the object and its parents for a rigidbody
+        carriedRigidbody =
+            carriedObject.GetComponentInParent<Rigidbody>();
+
+        // stores all colliders belonging to the object and its children
+        carriedColliders =
+            carriedObject.GetComponentsInChildren<Collider>(true);
+
+        // disables physics movement while the object is being carried
+        if (carriedRigidbody != null)
+        {
+            carriedRigidbody.isKinematic = true;
+            carriedRigidbody.linearVelocity = Vector3.zero;
+            carriedRigidbody.angularVelocity = Vector3.zero;
+        }
+
+        // disables the carried colliders so they cannot push the character controller
+        if (carriedColliders != null)
+        {
+            foreach (Collider carriedCollider in carriedColliders)
+            {
+                if (carriedCollider != null)
+                    carriedCollider.enabled = false;
+            }
+        }
+
+        // moves the object to the carry point
+        carriedObject.transform.SetPositionAndRotation(
+            carryPoint.position,
+            carryPoint.rotation
+        );
+
+        // checks whether the carried object is an objective item
         ObjectiveItem objectiveItem =
-            carriedObject.GetComponent<ObjectiveItem>();
+            carriedObject.GetComponentInParent<ObjectiveItem>();
 
+        // completes the key objective when the correct item is collected
         if (objectiveItem != null &&
-            GameManager.Instance.CurrentState ==
-            GameManager.GameState.FindKeys)
+            GameManager.Instance != null &&
+            GameManager.Instance.CurrentState == GameManager.GameState.FindKeys)
         {
             GameManager.Instance.KeysCollected();
         }
@@ -110,39 +151,69 @@ public class DogCarryController : MonoBehaviour
 
     private void OnGrabReleased(InputAction.CallbackContext context)
     {
+        // stops if there is no object being carried
         if (carriedObject == null)
             return;
 
-        Rigidbody rb = carriedObject.GetComponent<Rigidbody>();
+        // releases the carried object
+        ReleaseCarriedObject();
+    }
 
-        if (rb != null)
+    private void ReleaseCarriedObject()
+    {
+        // stops if there is no object being carried
+        if (carriedObject == null)
+            return;
+
+        // restores the colliders after the object is released
+        if (carriedColliders != null)
         {
-            rb.isKinematic = false;
+            foreach (Collider carriedCollider in carriedColliders)
+            {
+                if (carriedCollider != null)
+                    carriedCollider.enabled = true;
+            }
         }
 
+        // restores normal rigidbody physics after the object is released
+        if (carriedRigidbody != null)
+        {
+            carriedRigidbody.isKinematic = false;
+        }
+
+        // clears the stored object references
         carriedObject = null;
+        carriedRigidbody = null;
+        carriedColliders = null;
     }
 
     private void LateUpdate()
     {
+        // stops if there is no object being carried
         if (carriedObject == null || carryPoint == null)
             return;
 
-        carriedObject.transform.position = carryPoint.position;
-        carriedObject.transform.rotation = carryPoint.rotation;
+        // keeps the carried object aligned with the carry point
+        carriedObject.transform.SetPositionAndRotation(
+            carryPoint.position,
+            carryPoint.rotation
+        );
     }
 
     /// <summary>
-    /// returns true if the player is carrying the keys
+    /// returns true when the dog is carrying an objective item
     /// </summary>
     public bool IsCarryingObjectiveItem()
     {
+        // returns false when the dog is not carrying anything
         if (carriedObject == null)
             return false;
 
+        // searches the carried object and its parents for an objective item
         ObjectiveItem objectiveItem =
-            carriedObject.GetComponent<ObjectiveItem>();
+            carriedObject.GetComponentInParent<ObjectiveItem>();
 
+        // returns true only when the carried object is an objective item
         return objectiveItem != null;
     }
 }
