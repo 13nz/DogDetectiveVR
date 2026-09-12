@@ -1,9 +1,8 @@
-
 using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// controls walking, panting, sniffing, and objective-completion audio
+/// controls walking panting sniffing key and voice line audio
 /// </summary>
 public class DogAudioController : MonoBehaviour
 {
@@ -12,6 +11,7 @@ public class DogAudioController : MonoBehaviour
     [SerializeField] private AudioSource pantingSource;
     [SerializeField] private AudioSource sniffingSource;
     [SerializeField] private AudioSource completionSource;
+    [SerializeField] private AudioSource voiceLineSource;
 
     [Header("Audio Clips")]
     [SerializeField] private AudioClip walkingClip;
@@ -25,16 +25,76 @@ public class DogAudioController : MonoBehaviour
     [SerializeField] private float pantingVolume = 0.6f;
     [SerializeField] private float sniffingVolume = 0.7f;
     [SerializeField] private float completionVolume = 0.8f;
+    [SerializeField] private float voiceLineVolume = 1f;
 
     private Coroutine pantingCoroutine;
     private bool wasMoving;
 
     private void Awake()
     {
-        ConfigureAudioSource(walkingSource, walkingClip, walkingVolume, true);
-        ConfigureAudioSource(pantingSource, pantingClip, pantingVolume, true);
-        ConfigureAudioSource(sniffingSource, sniffingClip, sniffingVolume, true);
-        ConfigureAudioSource(completionSource, completionClip, completionVolume, false);
+        // automatically finds the completion audio source if one was not assigned
+        if (completionSource == null)
+        {
+            completionSource = GetComponent<AudioSource>();
+        }
+
+        // loads the key sound automatically if the clip was not assigned
+        if (completionClip == null)
+        {
+            completionClip =
+                Resources.Load<AudioClip>("Audio/Sounds/keys_found");
+        }
+
+        ConfigureAudioSource(
+            walkingSource,
+            walkingClip,
+            walkingVolume,
+            true
+        );
+
+        ConfigureAudioSource(
+            pantingSource,
+            pantingClip,
+            pantingVolume,
+            true
+        );
+
+        ConfigureAudioSource(
+            sniffingSource,
+            sniffingClip,
+            sniffingVolume,
+            true
+        );
+
+        ConfigureAudioSource(
+            completionSource,
+            completionClip,
+            completionVolume,
+            false
+        );
+
+        if (voiceLineSource != null)
+        {
+            voiceLineSource.playOnAwake = false;
+            voiceLineSource.loop = false;
+            voiceLineSource.spatialBlend = 0f;
+            voiceLineSource.volume = voiceLineVolume;
+        }
+
+        // reports a useful error if the key sound could not be found
+        if (completionSource == null)
+        {
+            Debug.LogError(
+                "no completion audio source was found on the dog audio controller"
+            );
+        }
+
+        if (completionClip == null)
+        {
+            Debug.LogError(
+                "the keys found audio clip could not be found"
+            );
+        }
     }
 
     /// <summary>
@@ -120,7 +180,6 @@ public class DogAudioController : MonoBehaviour
         }
     }
 
-
     /// <summary>
     /// handles the sprinting state and panting after sprinting
     /// </summary>
@@ -151,16 +210,50 @@ public class DogAudioController : MonoBehaviour
     }
 
     /// <summary>
-    /// plays the key-completion sound once
+    /// plays the keys sound
     /// </summary>
     public void PlayCompletionSound()
     {
-        if (completionSource == null || completionClip == null)
+        if (completionSource == null)
         {
+            Debug.LogError(
+                "cannot play the keys sound because the completion audio source is missing"
+            );
+
             return;
         }
 
-        completionSource.PlayOneShot(completionClip);
+        if (completionClip == null)
+        {
+            Debug.LogError(
+                "cannot play the keys sound because the completion audio clip is missing"
+            );
+
+            return;
+        }
+
+        // plays the keys sound without changing the configured source clip
+        completionSource.PlayOneShot(
+            completionClip,
+            completionVolume
+        );
+    }
+
+    /// <summary>
+    /// plays a voice line and waits for it to finish
+    /// </summary>
+    public IEnumerator PlayVoiceLine(AudioClip clip)
+    {
+        if (voiceLineSource == null || clip == null)
+        {
+            yield break;
+        }
+
+        voiceLineSource.Stop();
+        voiceLineSource.clip = clip;
+        voiceLineSource.Play();
+
+        yield return new WaitForSeconds(clip.length);
     }
 
     /// <summary>
@@ -205,6 +298,16 @@ public class DogAudioController : MonoBehaviour
         if (sniffingSource != null)
         {
             sniffingSource.Stop();
+        }
+
+        if (completionSource != null)
+        {
+            completionSource.Stop();
+        }
+
+        if (voiceLineSource != null)
+        {
+            voiceLineSource.Stop();
         }
     }
 }
