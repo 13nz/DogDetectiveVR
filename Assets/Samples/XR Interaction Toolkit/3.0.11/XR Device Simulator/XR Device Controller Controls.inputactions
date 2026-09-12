@@ -1,4 +1,5 @@
 {
+    "version": 1,
     "name": "XR Device Controller Controls",
     "maps": [
         {
@@ -63,7 +64,7 @@
                     "name": "Menu",
                     "type": "Button",
                     "id": "ccb35b49-777b-460f-bca8-3168c41cc779",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -337,6 +338,17 @@
                     "name": "",
                     "id": "45511393-aa9b-4031-8e31-4eec53ab2d3f",
                     "path": "<Keyboard>/m",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Menu",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e339873d-887c-431b-8207-64d6bfb1e71f",
+                    "path": "<XRController>{LeftHand}/menuButton",
                     "interactions": "",
                     "processors": "",
                     "groups": "",

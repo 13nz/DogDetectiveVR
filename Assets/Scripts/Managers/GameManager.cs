@@ -1,5 +1,7 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// controls the gameplay flow voice lines subtitles and objectives
@@ -23,6 +25,10 @@ public class GameManager : MonoBehaviour
 
     [Header("Voice Line Settings")]
     [SerializeField] private float voiceLineVolume = 1f;
+
+    [Header("Ending Scene")]
+    [SerializeField] private string endingSceneName = "Ending";
+    [SerializeField] private float endingDelay = 3f;
 
     [Header("Random Voice Settings")]
     [SerializeField] private float minimumRandomDelay = 12f;
@@ -48,6 +54,9 @@ public class GameManager : MonoBehaviour
     private AudioClip random3;
     private AudioClip random4;
     private AudioClip random5;
+
+    [Header("Audio")]
+    [SerializeField] private AudioMixerGroup voiceMixerGroup;
 
     private Coroutine randomVoiceCoroutine;
 
@@ -103,6 +112,7 @@ public class GameManager : MonoBehaviour
         }
 
         // configures the voice line audio source
+        voiceLineSource.outputAudioMixerGroup = voiceMixerGroup;
         voiceLineSource.playOnAwake = false;
         voiceLineSource.loop = false;
         voiceLineSource.volume = voiceLineVolume;
@@ -492,13 +502,27 @@ public class GameManager : MonoBehaviour
             ObjectiveManager.Instance.HideObjective();
         }
 
-        // plays the key sound when the keys are successfully placed
+        // plays the key sound after successful placement
         if (dogAudioController != null)
         {
             dogAudioController.PlayCompletionSound();
         }
 
-        // plays the final thank you voice line
+        // waits briefly before the final voice line
+        yield return new WaitForSeconds(0.2f);
+
+        // checks that the completion voice line exists
+        if (objectiveComplete == null)
+        {
+            Debug.LogError(
+                "the objective complete voice line is missing"
+            );
+
+            endingSequencePlaying = false;
+            yield break;
+        }
+
+        // plays the final voice line
         yield return StartCoroutine(
             PlayVoiceLine(
                 objectiveComplete,
@@ -511,6 +535,12 @@ public class GameManager : MonoBehaviour
         {
             subtitleManager.ClearSubtitle();
         }
+
+        // waits before loading the ending scene
+        yield return new WaitForSeconds(endingDelay);
+
+        // loads the ending scene
+        SceneManager.LoadScene(endingSceneName);
     }
 
     /// <summary>
