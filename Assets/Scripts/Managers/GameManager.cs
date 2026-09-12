@@ -367,22 +367,19 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        if (tableTrigger == null)
-        {
-            return;
-        }
-
-        // stores the current table
+        // stores the table trigger
         currentTableTrigger = tableTrigger;
+
+        // remembers that the player is at the table
         waitingForKeyPlacement = true;
 
-        // plays the table dialogue when carrying the keys
-        if (dogCarryController != null &&
-            dogCarryController.IsCarryingObjectiveItem() &&
-            !nearTableSequencePlaying)
-        {
-            StartCoroutine(NearTableRoutine());
-        }
+        // tells the dog to put the keys on the table
+        StartCoroutine(
+            PlayVoiceLine(
+                nearTable,
+                "That is it buddy put them on the table"
+            )
+        );
     }
 
     /// <summary>
@@ -409,43 +406,31 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void PlayerLeftTable(OwnerTrigger tableTrigger)
     {
-        // only clears the current table
+        // only clears the current table trigger
         if (currentTableTrigger != tableTrigger)
         {
             return;
         }
 
+        // remembers that the player left the table
         waitingForKeyPlacement = false;
         currentTableTrigger = null;
     }
 
-    /// <summary>
-    /// checks whether the keys can be released at a position
-    /// </summary>
-    public bool CanPlaceKeysAtPosition(Vector3 position)
+    public bool IsAtKeyPlacementArea()
     {
-        // only allows placement during the return state
-        if (CurrentState != GameState.ReturnKeys)
-        {
-            return false;
-        }
-
-        // checks that a table trigger exists
-        if (currentTableTrigger == null)
-        {
-            return false;
-        }
-
-        // checks whether the keys landed inside the table area
-        return currentTableTrigger.IsPositionInsideTable(position);
+        // checks whether the player is currently at the table
+        return waitingForKeyPlacement &&
+            currentTableTrigger != null;
     }
+   
 
     /// <summary>
-    /// completes the game when the keys are placed on the table
+    /// completes the game when the dog places the keys on the table
     /// </summary>
     public void KeysPlacedOnTable()
     {
-        // only allows placement during the return state
+        // only allows completion during the return keys state
         if (CurrentState != GameState.ReturnKeys)
         {
             return;
@@ -462,6 +447,24 @@ public class GameManager : MonoBehaviour
         currentTableTrigger = null;
 
         // starts the final sequence
+        StartCoroutine(CompleteRoutine());
+    }
+
+    public void KeysEnteredPlacementZone()
+    {
+        // only responds during the return keys state
+        if (CurrentState != GameState.ReturnKeys)
+        {
+            return;
+        }
+
+        // prevents the ending from starting more than once
+        if (endingSequencePlaying)
+        {
+            return;
+        }
+
+        // starts the completion sequence
         StartCoroutine(CompleteRoutine());
     }
 
@@ -489,13 +492,7 @@ public class GameManager : MonoBehaviour
             ObjectiveManager.Instance.HideObjective();
         }
 
-        // waits for the table instruction to finish
-        while (nearTableSequencePlaying)
-        {
-            yield return null;
-        }
-
-        // plays the key sound again
+        // plays the key sound when the keys are successfully placed
         if (dogAudioController != null)
         {
             dogAudioController.PlayCompletionSound();
@@ -514,8 +511,6 @@ public class GameManager : MonoBehaviour
         {
             subtitleManager.ClearSubtitle();
         }
-
-        endingSequencePlaying = false;
     }
 
     /// <summary>

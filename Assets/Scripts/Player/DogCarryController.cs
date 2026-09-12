@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -19,9 +18,6 @@ public class DogCarryController : MonoBehaviour
     [SerializeField] private float detectionRadius = 0.12f;
     [SerializeField] private LayerMask carryableLayers = ~0;
 
-    [Header("Placement")]
-    [SerializeField] private float placementCheckDelay = 0.4f;
-
     private CarryableObject carriedObject;
     private Rigidbody carriedRigidbody;
     private Collider[] carriedColliders;
@@ -30,76 +26,97 @@ public class DogCarryController : MonoBehaviour
 
     private void OnEnable()
     {
+        // stops the script if no grab action exists
         if (grabAction == null)
         {
             return;
         }
 
+        // enables the grab action
         grabAction.action.Enable();
+
+        // listens for grabbing and releasing
         grabAction.action.performed += OnGrabPressed;
         grabAction.action.canceled += OnGrabReleased;
     }
 
     private void OnDisable()
     {
+        // stops the script if no grab action exists
         if (grabAction == null)
         {
             return;
         }
 
+        // removes the input listeners
         grabAction.action.performed -= OnGrabPressed;
         grabAction.action.canceled -= OnGrabReleased;
+
+        // disables the grab action
         grabAction.action.Disable();
 
+        // releases the current object
         ReleaseCarriedObject();
     }
 
     private void OnGrabPressed(InputAction.CallbackContext context)
     {
+        // prevents carrying multiple objects
         if (carriedObject != null)
         {
             return;
         }
 
+        // checks the required references
         if (cameraTransform == null || carryPoint == null)
         {
             return;
         }
 
+        // creates a ray from the camera
         Ray ray = new Ray(
             cameraTransform.position,
             cameraTransform.forward
         );
 
+        // searches for a carryable object
         if (!Physics.SphereCast(
-            ray,
-            detectionRadius,
-            out RaycastHit hit,
-            maxCarryDistance,
-            carryableLayers,
-            QueryTriggerInteraction.Ignore))
+                ray,
+                detectionRadius,
+                out RaycastHit hit,
+                maxCarryDistance,
+                carryableLayers,
+                QueryTriggerInteraction.Ignore))
         {
             return;
         }
 
+        // finds the carryable object
         CarryableObject carryable =
             hit.collider.GetComponentInParent<CarryableObject>();
 
+        // stops if the object cannot be carried
         if (carryable == null)
         {
-            Debug.Log("the detected object does not have a carryable object script");
+            Debug.Log(
+                "the detected object does not have a carryable object script"
+            );
+
             return;
         }
 
+        // stores the object
         carriedObject = carryable;
 
+        // finds the rigidbody
         carriedRigidbody =
             carriedObject.GetComponentInParent<Rigidbody>();
 
+        // finds all colliders
         carriedColliders =
             carriedObject.GetComponentsInChildren<Collider>(true);
 
-        // disables physics while the dog is carrying the object
+        // disables physics while carrying
         if (carriedRigidbody != null)
         {
             carriedRigidbody.isKinematic = true;
@@ -107,7 +124,7 @@ public class DogCarryController : MonoBehaviour
             carriedRigidbody.angularVelocity = Vector3.zero;
         }
 
-        // disables the object colliders while carrying
+        // disables colliders while carrying
         if (carriedColliders != null)
         {
             foreach (Collider carriedCollider in carriedColliders)
@@ -119,19 +136,21 @@ public class DogCarryController : MonoBehaviour
             }
         }
 
-        // moves the object to the dogs carry point
+        // moves the object to the carry point
         carriedObject.transform.SetPositionAndRotation(
             carryPoint.position,
             carryPoint.rotation
         );
 
+        // checks whether this is the objective item
         ObjectiveItem objectiveItem =
             carriedObject.GetComponentInParent<ObjectiveItem>();
 
         // tells the game manager that the keys were found
         if (objectiveItem != null &&
             GameManager.Instance != null &&
-            GameManager.Instance.CurrentState == GameManager.GameState.FindKeys)
+            GameManager.Instance.CurrentState ==
+            GameManager.GameState.FindKeys)
         {
             GameManager.Instance.KeysCollected();
         }
@@ -139,56 +158,28 @@ public class DogCarryController : MonoBehaviour
 
     private void OnGrabReleased(InputAction.CallbackContext context)
     {
+        // stops if nothing is being carried
         if (carriedObject == null)
         {
             return;
         }
 
-        // remembers whether the released object is the objective item
+        // checks whether this is the objective item
         ObjectiveItem objectiveItem =
             carriedObject.GetComponentInParent<ObjectiveItem>();
 
-        // remembers the released object
-        CarryableObject releasedObject = carriedObject;
+        // checks whether the player is inside the table zone
+        bool atTable =
+            GameManager.Instance != null &&
+            GameManager.Instance.IsAtKeyPlacementArea();
 
-        // restores the object and its physics
+        // releases the object first
         ReleaseCarriedObject();
 
-        // checks the final position after the object has had time to fall
+        // completes the objective after the keys are released
         if (objectiveItem != null &&
+            atTable &&
             GameManager.Instance != null)
-        {
-            StartCoroutine(
-                CheckKeyPlacementAfterRelease(
-                    releasedObject
-                )
-            );
-        }
-    }
-
-    private IEnumerator CheckKeyPlacementAfterRelease(
-        CarryableObject releasedObject)
-    {
-        // waits for physics to move the keys onto the table
-        yield return new WaitForSeconds(
-            placementCheckDelay
-        );
-
-        // stops if the object no longer exists
-        if (releasedObject == null)
-        {
-            yield break;
-        }
-
-        // checks the actual position where the keys landed
-        Vector3 finalPosition =
-            releasedObject.transform.position;
-
-        // checks whether the keys landed on the table
-        if (GameManager.Instance != null &&
-            GameManager.Instance.CanPlaceKeysAtPosition(
-                finalPosition
-            ))
         {
             GameManager.Instance.KeysPlacedOnTable();
         }
@@ -196,12 +187,13 @@ public class DogCarryController : MonoBehaviour
 
     private void ReleaseCarriedObject()
     {
+        // stops if nothing is being carried
         if (carriedObject == null)
         {
             return;
         }
 
-        // restores all object colliders
+        // restores all colliders
         if (carriedColliders != null)
         {
             foreach (Collider carriedCollider in carriedColliders)
@@ -229,12 +221,13 @@ public class DogCarryController : MonoBehaviour
 
     private void LateUpdate()
     {
+        // stops if nothing is being carried
         if (carriedObject == null || carryPoint == null)
         {
             return;
         }
 
-        // keeps the object attached to the dogs carry point
+        // keeps the object at the carry point
         carriedObject.transform.SetPositionAndRotation(
             carryPoint.position,
             carryPoint.rotation
@@ -243,56 +236,16 @@ public class DogCarryController : MonoBehaviour
 
     public bool IsCarryingObjectiveItem()
     {
+        // stops if nothing is being carried
         if (carriedObject == null)
         {
             return false;
         }
 
+        // checks whether the object is an objective item
         ObjectiveItem objectiveItem =
             carriedObject.GetComponentInParent<ObjectiveItem>();
 
         return objectiveItem != null;
-    }
-
-    public void PlaceCarriedObjectAt(Transform placementPoint)
-    {
-        if (carriedObject == null)
-        {
-            return;
-        }
-
-        // optionally moves the object to a specified position
-        if (placementPoint != null)
-        {
-            carriedObject.transform.SetPositionAndRotation(
-                placementPoint.position,
-                placementPoint.rotation
-            );
-        }
-
-        // restores all object colliders
-        if (carriedColliders != null)
-        {
-            foreach (Collider collider in carriedColliders)
-            {
-                if (collider != null)
-                {
-                    collider.enabled = true;
-                }
-            }
-        }
-
-        // restores normal physics
-        if (carriedRigidbody != null)
-        {
-            carriedRigidbody.isKinematic = false;
-            carriedRigidbody.linearVelocity = Vector3.zero;
-            carriedRigidbody.angularVelocity = Vector3.zero;
-        }
-
-        // clears the carrying references
-        carriedObject = null;
-        carriedRigidbody = null;
-        carriedColliders = null;
     }
 }
