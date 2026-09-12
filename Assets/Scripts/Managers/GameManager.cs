@@ -430,19 +430,13 @@ public class GameManager : MonoBehaviour
             return false;
         }
 
-        // checks that the player is at the table
-        if (!waitingForKeyPlacement)
-        {
-            return false;
-        }
-
         // checks that a table trigger exists
         if (currentTableTrigger == null)
         {
             return false;
         }
 
-        // checks whether the position is inside the table area
+        // checks whether the keys landed inside the table area
         return currentTableTrigger.IsPositionInsideTable(position);
     }
 

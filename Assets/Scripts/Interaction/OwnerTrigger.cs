@@ -9,12 +9,12 @@ public class OwnerTrigger : MonoBehaviour
 
     private void Awake()
     {
-        // gets the collider attached to the table
+        // gets the placement collider
         placementCollider = GetComponent<Collider>();
     }
 
     /// <summary>
-    /// checks whether a position is inside the table placement area
+    /// checks whether a position is over the table placement area
     /// </summary>
     public bool IsPositionInsideTable(Vector3 position)
     {
@@ -24,8 +24,18 @@ public class OwnerTrigger : MonoBehaviour
             return false;
         }
 
-        // checks whether the position is inside the placement collider
-        return placementCollider.bounds.Contains(position);
+        // gets the collider bounds
+        Bounds bounds = placementCollider.bounds;
+
+        // ignores the height of the keys
+        Vector3 positionOnTablePlane = new Vector3(
+            position.x,
+            bounds.center.y,
+            position.z
+        );
+
+        // checks the horizontal position of the keys
+        return bounds.Contains(positionOnTablePlane);
     }
 
     private void OnTriggerEnter(Collider other)

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -17,6 +18,9 @@ public class DogCarryController : MonoBehaviour
     [SerializeField] private float maxCarryDistance = 0.8f;
     [SerializeField] private float detectionRadius = 0.12f;
     [SerializeField] private LayerMask carryableLayers = ~0;
+
+    [Header("Placement")]
+    [SerializeField] private float placementCheckDelay = 0.4f;
 
     private CarryableObject carriedObject;
     private Rigidbody carriedRigidbody;
@@ -140,25 +144,51 @@ public class DogCarryController : MonoBehaviour
             return;
         }
 
-        // remembers whether this is the objective item
+        // remembers whether the released object is the objective item
         ObjectiveItem objectiveItem =
             carriedObject.GetComponentInParent<ObjectiveItem>();
 
-        // remembers the exact position where the player released the object
-        Vector3 releasePosition = carriedObject.transform.position;
+        // remembers the released object
+        CarryableObject releasedObject = carriedObject;
 
-        // checks whether the keys were released on the table
-        bool placedOnTable =
-            objectiveItem != null &&
-            GameManager.Instance != null &&
-            GameManager.Instance.CanPlaceKeysAtPosition(releasePosition);
-
-        // restores the object and leaves it where it was released
+        // restores the object and its physics
         ReleaseCarriedObject();
 
-        // completes the objective after the object has been released
-        if (placedOnTable &&
+        // checks the final position after the object has had time to fall
+        if (objectiveItem != null &&
             GameManager.Instance != null)
+        {
+            StartCoroutine(
+                CheckKeyPlacementAfterRelease(
+                    releasedObject
+                )
+            );
+        }
+    }
+
+    private IEnumerator CheckKeyPlacementAfterRelease(
+        CarryableObject releasedObject)
+    {
+        // waits for physics to move the keys onto the table
+        yield return new WaitForSeconds(
+            placementCheckDelay
+        );
+
+        // stops if the object no longer exists
+        if (releasedObject == null)
+        {
+            yield break;
+        }
+
+        // checks the actual position where the keys landed
+        Vector3 finalPosition =
+            releasedObject.transform.position;
+
+        // checks whether the keys landed on the table
+        if (GameManager.Instance != null &&
+            GameManager.Instance.CanPlaceKeysAtPosition(
+                finalPosition
+            ))
         {
             GameManager.Instance.KeysPlacedOnTable();
         }
